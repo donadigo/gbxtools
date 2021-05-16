@@ -1,6 +1,7 @@
 import json
 from pygbx import Gbx, GbxType
 from pygbx.headers import ControlEntry, CGameCtnGhost
+from numpy import int32
 import sys
 import os
 from pprint import pprint
@@ -15,11 +16,10 @@ if len(sys.argv) < 2:
     quit()
 
 def event_to_analog_value(event: ControlEntry):
-    if event.flags < 128:
-        return -event.enabled - (event.flags * 65536)
-    else:
-        mul = 255 - event.flags
-        return (mul * 65536) + (65536 - event.enabled)
+    val = int32((event.flags << 16) | event.enabled)
+    val <<= 8
+    val >>= 8
+    return -val
 
 def partition_steer_events(events: list, sample_period: int):
     p = []

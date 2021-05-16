@@ -1,5 +1,6 @@
 from pygbx import Gbx, GbxType
 from pygbx.headers import ControlEntry, CGameCtnGhost
+from numpy import int32
 import sys
 import os
 
@@ -46,13 +47,12 @@ def should_skip_event(event: ControlEntry):
         
     return event.enabled == 0
 
-def event_to_analog_value(event: ControlEntry):
-    if event.flags < 128:
-        return -event.enabled - (event.flags * 65536)
-    else:
-        mul = 255 - event.flags
-        return (mul * 65536) + (65536 - event.enabled)
 
+def event_to_analog_value(event: ControlEntry):
+    val = int32((event.flags << 16) | event.enabled)
+    val <<= 8
+    val >>= 8
+    return -val
 
 def try_parse_old_ghost(g: Gbx):
     ghost = CGameCtnGhost(0)
@@ -199,7 +199,7 @@ def main():
 
     path = sys.argv[1]
     if os.path.isdir(path):
-        for root, subdirs, files in os.walk(path):
+        for root, _, files in os.walk(path):
             for filename in files:
                 lower = filename.lower()
                 if lower.endswith('.gbx'):
