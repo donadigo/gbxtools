@@ -50,8 +50,8 @@ def should_skip_event(event: ControlEntry):
 
 def event_to_analog_value(event: ControlEntry):
     val = int32((event.flags << 16) | event.enabled)
-    val <<= 8
-    val >>= 8
+    val <<= int32(8)
+    val >>= int32(8)
     return -val
 
 def try_parse_old_ghost(g: Gbx):
