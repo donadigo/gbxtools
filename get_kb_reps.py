@@ -68,8 +68,6 @@ def uses_binary_input(path: str):
     results = {'version': ghost.game_version, 'login': ghost.login, 'max_taps': 0, 'taps': 0}
 
     ghost = ghosts[0]
-    if ghost.login != 'acceleracer_01':
-        return None
 
     for entry in ghost.control_entries:
         if entry.event_name == 'Steer':
