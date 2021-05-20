@@ -86,7 +86,7 @@ def get_steering_inputs(path: str):
 def main():
     """ Main Entry Point for 'plot_steering.py'. """
 
-    # Check if folder was provided as argument
+    # Check arguments
     if len(sys.argv) < 2:
         print('No file(s) or path provided.')
         sys.exit()
@@ -94,6 +94,7 @@ def main():
     # Iterate overall multiple replays
     replays = []
 
+    # Check if folder was provided as argument
     path = sys.argv[1]
     if os.path.isdir(path):
         for root, _, files in os.walk(path):
@@ -101,7 +102,7 @@ def main():
                 if filename.lower().endswith('.gbx'):
                     replays.append(os.path.join(root, filename))
     else:
-        # No folder was given, consider multiple input files as argumetns
+        # No folder was given, consider multiple input files as arguments
         replays = sys.argv[1::]
 
     # Iterate over all replays
@@ -122,7 +123,7 @@ def main():
     replay_names = [os.path.basename(replay_name) for replay_name in replays]
     plt.legend(replay_names)
 
-    # Specify Title
+    # Specify title
     plt.title('Steering comparison')
 
     # Finally show the plot
