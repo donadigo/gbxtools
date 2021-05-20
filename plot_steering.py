@@ -86,10 +86,14 @@ def get_steering_inputs(path: str):
 def main():
     """ Main Entry Point for 'plot_steering.py'. """
 
+    # Check if folder was provided as argument
+    if len(sys.argv) < 2:
+        print('No file(s) or path provided.')
+        sys.exit()
+
     # Iterate overall multiple replays
     replays = []
 
-    # Check if folder was provided as argument
     path = sys.argv[1]
     if os.path.isdir(path):
         for root, _, files in os.walk(path):
