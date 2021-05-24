@@ -76,7 +76,6 @@ def analyze_replay(path: str):
     else:
         ghost = ghosts[0]
 
-    ghost = ghosts[0]
     results = {'version': ghost.game_version, 'login': ghost.login, 'max_spikes': 0, 'spikes': 0}
 
     partitions = partition_steer_events(ghost.control_entries, TIME_PERIOD)
