@@ -21,6 +21,18 @@ def event_to_analog_value(event: ControlEntry):
     val >>= int32(8)
     return -val
 
+def clean_duplicate_events(events: list):
+    """
+    ESWC events seem a bit janky. Try to get rid of that by removing 'duplicate'
+    events. Take the latest one
+    """
+    events_cleaned = []
+    for i in range(0, (len(events)-1)):
+        if int(events[i+1].time / 10) * 10 != int(events[i].time / 10) * 10:
+            events_cleaned.append(events[i])
+    events_cleaned.append(events[-1])
+    return events_cleaned
+
 def partition_steer_events(events: list, sample_period: int):
     p = []
     current = []
@@ -56,6 +68,24 @@ def try_parse_old_ghost(g: Gbx):
 
     return None
 
+def try_parse_nations_eswc_ghost(g: Gbx):
+    ghost = CGameCtnGhost(0)
+    ghost.login = ""  # unavailable in ESWC?
+
+    parser = g.find_raw_chunk_id(0x3f00dff)
+    if parser:
+        parser.seen_loopback = True
+        g.read_ghost_events(ghost, parser, 0x3f00dff)
+        return ghost
+
+    parser = g.find_raw_chunk_id(0x3f00dfa)
+    if parser:
+        parser.seen_loopback = True
+        g.read_ghost_events(ghost, parser, 0x3f00dfa)
+        return ghost
+
+    return None
+
 def analyze_replay(path: str):
     try:
         g = Gbx(path)
@@ -67,8 +97,11 @@ def analyze_replay(path: str):
     if not ghosts:
         ghost = try_parse_old_ghost(g)
         if not ghost:
-            print('Error: no ghosts')
-            return None
+            ghost = try_parse_nations_eswc_ghost(g)
+            if not ghost:
+                print('Error: no ghosts')
+                return None
+            ghost.control_entries = clean_duplicate_events(ghost.control_entries)
 
         if not ghost.control_entries:
             print('Error: no control entries')
