@@ -1,6 +1,7 @@
 from pygbx import Gbx, GbxType
 from pygbx.headers import ControlEntry, CGameCtnGhost
 from numpy import int32
+import math
 import sys
 import os
 
@@ -54,16 +55,31 @@ def event_to_analog_value(event: ControlEntry):
     val >>= int32(8)
     return -val
 
-def clean_duplicate_events(events: list):
+def clean_duplicate_steer_events(events: list) -> list:
     """
     ESWC events seem a bit janky. Try to get rid of that by removing 'duplicate'
-    events. Take the latest one
+    steer events. Take the latest one in every 10 msec block.
     """
-    events_cleaned = []
-    for i in range(0, (len(events)-1)):
-        if int(events[i+1].time / 10) * 10 != int(events[i].time / 10) * 10:
-            events_cleaned.append(events[i])
-    events_cleaned.append(events[-1])
+    ceil10 = lambda x: math.ceil(x / 10) * 10
+
+    indices_to_keep = []
+    candidate_time = None
+    for i, ev in enumerate(events):
+        if ev.event_name != 'Steer':
+            indices_to_keep.append(i)
+            continue
+        if candidate_time is not None and ceil10(ev.time) != candidate_time:
+            indices_to_keep.append(candidate_i)
+        candidate_i = i
+        candidate_time = ceil10(events[candidate_i].time)
+    if candidate_time is not None:
+        indices_to_keep.append(candidate_i)
+
+    events_cleaned = [events[i] for i in sorted(indices_to_keep)]
+    for i, ev in enumerate(events_cleaned):
+        if ev.event_name == 'Steer':
+            events_cleaned[i] = ev.copy()
+            events_cleaned[i].time = ceil10(ev.time)
     return events_cleaned
 
 def try_parse_old_ghost(g: Gbx):
@@ -216,7 +232,7 @@ def process_path(path, write_func):
             if not ghost:
                 print('Error: no ghosts')
                 return None
-            ghost.control_entries = clean_duplicate_events(ghost.control_entries)
+            ghost.control_entries = clean_duplicate_steer_events(ghost.control_entries)
     else:
         ghost = ghosts[0]
 
