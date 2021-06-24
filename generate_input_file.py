@@ -1,6 +1,7 @@
 from pygbx import Gbx, GbxType
 from pygbx.headers import ControlEntry, CGameCtnGhost
 from numpy import int32
+import math
 import sys
 import os
 
@@ -54,6 +55,33 @@ def event_to_analog_value(event: ControlEntry):
     val >>= int32(8)
     return -val
 
+def clean_duplicate_steer_events(events: list) -> list:
+    """
+    ESWC events seem a bit janky. Try to get rid of that by removing 'duplicate'
+    steer events. Take the latest one in every 10 msec block.
+    """
+    ceil10 = lambda x: math.ceil(x / 10) * 10
+
+    indices_to_keep = []
+    candidate_time = None
+    for i, ev in enumerate(events):
+        if ev.event_name != 'Steer':
+            indices_to_keep.append(i)
+            continue
+        if candidate_time is not None and ceil10(ev.time) != candidate_time:
+            indices_to_keep.append(candidate_i)
+        candidate_i = i
+        candidate_time = ceil10(events[candidate_i].time)
+    if candidate_time is not None:
+        indices_to_keep.append(candidate_i)
+
+    events_cleaned = [events[i] for i in sorted(indices_to_keep)]
+    for i, ev in enumerate(events_cleaned):
+        if ev.event_name == 'Steer':
+            events_cleaned[i] = ev.copy()
+            events_cleaned[i].time = ceil10(ev.time)
+    return events_cleaned
+
 def try_parse_old_ghost(g: Gbx):
     ghost = CGameCtnGhost(0)
 
@@ -65,6 +93,24 @@ def try_parse_old_ghost(g: Gbx):
     if parser:
         parser.seen_loopback = True
         g.read_ghost_events(ghost, parser, 0x2401B011)
+        return ghost
+
+    return None
+
+def try_parse_nations_eswc_ghost(g: Gbx):
+    ghost = CGameCtnGhost(0)
+    ghost.login = ""  # unavailable in ESWC?
+
+    parser = g.find_raw_chunk_id(0x3f00dff)
+    if parser:
+        parser.seen_loopback = True
+        g.read_ghost_events(ghost, parser, 0x3f00dff)
+        return ghost
+
+    parser = g.find_raw_chunk_id(0x3f00dfa)
+    if parser:
+        parser.seen_loopback = True
+        g.read_ghost_events(ghost, parser, 0x3f00dfa)
         return ghost
 
     return None
@@ -181,6 +227,12 @@ def process_path(path, write_func):
     ghosts = g.get_classes_by_ids([GbxType.CTN_GHOST, GbxType.CTN_GHOST_OLD])
     if not ghosts:
         ghost = try_parse_old_ghost(g)
+        if not ghost:
+            ghost = try_parse_nations_eswc_ghost(g)
+            if not ghost:
+                print('Error: no ghosts')
+                return None
+            ghost.control_entries = clean_duplicate_steer_events(ghost.control_entries)
     else:
         ghost = ghosts[0]
 
