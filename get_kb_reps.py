@@ -49,7 +49,7 @@ def partition_binary_events(events: list, sample_period: int):
 def uses_binary_input(path: str):
     try:
         g = Gbx(path)
-    except:
+    except Exception as e:
         print(f'Error parsing: {e}')
 
     ghosts = g.get_classes_by_ids([GbxType.CTN_GHOST, GbxType.CTN_GHOST_OLD])
